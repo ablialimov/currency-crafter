@@ -3,38 +3,34 @@
 namespace App\Service;
 
 use App\Contract\FileParserInterface;
-use App\Service\CommissionFeeCalculator;
 
 class FileParserManager
 {
-    public function __construct(
-        private readonly iterable $parsers,
-        private readonly CommissionFeeCalculator $feeCalculator
-    ) {
+    private array $parsersMap;
+
+    public function __construct($parsers)
+    {
+        /** @var FileParserInterface $parser */
+        foreach ($parsers as $parser) {
+            $this->parsersMap[$parser->format()] = $parser;
+        }
     }
 
     public function parse(string $filename): array
     {
-        $ext = $this->getFileExtension($filename);
-
-        /** @var FileParserInterface $parser */
-        foreach ($this->parsers as $parser) {
-            if ($ext === $parser->format()) {
-                $data = $parser->parse($filename);
-            }
-       }
-
-        if (empty($data)) {
-            throw new \RuntimeException('Unsupported file extension.');
-        }
-
-        return $this->feeCalculator->calculate($data);
+        return $this->getParser($filename)->parse($filename);
     }
 
-    private function getFileExtension($filename): string
+    private function getFileExtension(string $filename): string
     {
+        // In general better to use some lib to identify file type properly
         $fileNameParts = explode('.', $filename);
 
         return end($fileNameParts);
+    }
+
+    private function getParser(string $filename): FileParserInterface
+    {
+        return $this->parsersMap[$this->getFileExtension($filename)];
     }
 }

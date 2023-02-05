@@ -2,28 +2,41 @@
 
 namespace App\Service;
 
+use Exception;
+use RuntimeException;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class CurrencyExchanger
 {
-    private const API_URL = 'https://developers.paysera.com/tasks/api/currency-exchange-rates';
+    private static array $rates = [];
 
-    public function __construct(private readonly HttpClientInterface $client)
+    public function __construct(
+        private readonly string $apiUrl,
+        private readonly HttpClientInterface $client
+    )
     {
+        self::$rates = self::$rates ?: $this->loadRates();
     }
 
     public function rate(string $currency): string
     {
-        // @todo use cache
+        return self::$rates[$currency];
+    }
 
-        $response = $this->client->request('GET', static::API_URL);
+    private function loadRates()
+    {
+        try {
+            $response = $this->client->request('GET', $this->apiUrl);
 
-        if (!$response->getStatusCode() === 200) {
-            throw new \RuntimeException('Currency exchanger API is not available.');
+            if ($response->getStatusCode() !== 200) {
+                throw new RuntimeException('Currency exchanger API is not available.');
+            }
+
+            return $response->toArray()['rates'];
         }
-
-        $content = $response->toArray();
-
-        return $content['rates'][$currency];
+        // In some cases it makes sense to separate processing of different exceptions
+        catch (Exception $e) {
+            throw new RuntimeException('Currency exchanger API is not available due to error: ' . $e->getMessage());
+        }
     }
 }

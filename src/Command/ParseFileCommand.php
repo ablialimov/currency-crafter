@@ -2,6 +2,7 @@
 
 namespace App\Command;
 
+use App\Service\CommissionFeeManager;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -10,14 +11,15 @@ use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Input\InputArgument;
 
 #[AsCommand(
-    name: 'app:parse-file',
-    description: 'Parse a file.'
+    name: 'app:calculate-fees',
+    description: 'Calculate fees based on CSV data file.'
 )]
 class ParseFileCommand extends Command
 {
-
-    public function __construct(private readonly FileParserManager $parser)
-    {
+    public function __construct(
+        private readonly FileParserManager $parser,
+        private readonly CommissionFeeManager $feeManager
+    ) {
         parent::__construct();
     }
 
@@ -28,9 +30,14 @@ class ParseFileCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        // @todo add validation
+        $filename = $input->getArgument('filename');
 
-        $fees = $this->parser->parse($input->getArgument('filename'));
+        if (!file_exists($filename)) {
+            $output->writeln('Error: selected file cannot be found.');
+            return Command::INVALID;
+        }
+
+        $fees = $this->feeManager->calculate($this->parser->parse($filename));
 
         foreach ($fees as $fee) {
             $output->writeln($fee);

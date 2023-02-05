@@ -26,3 +26,22 @@ services:
     App\Service\FileParserManager:
         arguments:
             $parsers: !tagged_iterator file.parsing
+
+    App\Service\CurrencyExchanger:
+        arguments:
+            $apiUrl: '%env(CURRENCY_EXCHANGE_API_URL)%'
+
+    App\Service\CommissionFeeManager:
+        arguments:
+            $calculators: !tagged_iterator fee.calculator
+
+    App\Service\Calculators\DepositCalculator:
+        arguments:
+            $depositPercentFee: '%env(DEPOSIT_PERCENT_FEE)%'
+
+    App\Service\Calculators\WithdrawCalculator:
+        arguments:
+            $privateClientFee: '%env(WITHDRAW_FEE_FOR_PRIVATE_CLIENT)%'
+            $businessClientFee: '%env(WITHDRAW_FEE_FOR_BUSINESS_CLIENT)%'
+            $privateClientFreeAmount: '%env(PRIVATE_CLIENT_FREE_AMOUNT)%'
+            $privateClientFreeWithdraws: '%env(PRIVATE_CLIENT_FREE_WITHDRAWS)%'
