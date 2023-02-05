@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Service;
 
 use Exception;
@@ -8,19 +10,21 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class CurrencyExchanger
 {
-    private static array $rates = [];
+    private array $rates = [];
 
     public function __construct(
         private readonly string $apiUrl,
         private readonly HttpClientInterface $client
-    )
-    {
-        self::$rates = self::$rates ?: $this->loadRates();
+    ) {
     }
 
-    public function rate(string $currency): string
+    public function rate(string $currency): float
     {
-        return self::$rates[$currency];
+        if (!$this->rates) {
+            $this->rates = $this->loadRates();
+        }
+
+        return $this->rates[$currency];
     }
 
     private function loadRates()
@@ -33,10 +37,8 @@ class CurrencyExchanger
             }
 
             return $response->toArray()['rates'];
-        }
-        // In some cases it makes sense to separate processing of different exceptions
-        catch (Exception $e) {
-            throw new RuntimeException('Currency exchanger API is not available due to error: ' . $e->getMessage());
+        } catch (Exception $e) {
+            throw new RuntimeException(sprintf('Currency exchanger API is not available due to error: %s', $e->getMessage()));
         }
     }
 }

@@ -1,28 +1,28 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Service\Parsers;
 
 use App\Contract\FileParserInterface;
 
 class CsvParser implements FileParserInterface
 {
-    public function format(): string
+    public function mimeType(): string
     {
-        return 'csv';
+        return 'text/csv';
     }
 
-    public function parse(string $filepath): array
+    public function parse(string $filename): \Generator
     {
-        $result = [];
+        $handle = fopen($filename, 'r');
 
-        if (($handle = fopen($filepath, 'r')) !== false) {
-            while (($data = fgetcsv($handle)) !== false) {
-                $result[] = $data;
+        try {
+            while ($line = fgetcsv($handle)) {
+                yield $line;
             }
-
+        } finally {
             fclose($handle);
         }
-
-        return $result;
     }
 }

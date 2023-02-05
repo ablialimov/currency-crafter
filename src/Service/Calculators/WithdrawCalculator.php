@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Service\Calculators;
 
 use App\Contract\FeeCalculatorInterface;
@@ -15,45 +17,46 @@ class WithdrawCalculator implements FeeCalculatorInterface
         private string $businessClientFee,
         private string $privateClientFreeAmount,
         private string $privateClientFreeWithdraws,
-        private readonly CurrencyExchanger $currencyExchanger
-    )
-    {}
+        private readonly CurrencyExchanger $currencyExchanger,
+        private readonly int $feePrecision,
+        private readonly string $defaultCurrency
+    ) {
+        bcscale($feePrecision);
+    }
 
     public function getType(): string
     {
         return 'withdraw';
     }
 
-    public function calculate(string $date, string $userId, string $userType, string $amount, string $currency): string
+    public function calculate(string $date, string $userId, string $userType, float $amount, string $currency): string
     {
         if (static::USER_TYPE_BUSINESS === $userType) {
             return $this->calcBusinessClientFee($amount);
         }
 
-        $amountEuro = $this->convertToEuro($amount, $currency);
+        $amountInDefaultCurrency = $this->convertToDefaultCurrency($amount, $currency);
         $weekId = $this->getWeekId($date);
         $userKey = $userId . '.' . $weekId;
 
         $this->withdrawFrequency[$userKey] ??= ['sum' => 0.0, 'frequency' => 0];
-        $this->withdrawFrequency[$userKey]['sum'] += $amountEuro;
+        $this->withdrawFrequency[$userKey]['sum'] += $amountInDefaultCurrency;
         $this->withdrawFrequency[$userKey]['frequency']++;
 
         if ($this->withdrawFrequency[$userKey]['sum'] > $this->privateClientFreeAmount) {
             $notFreeAmount = $this->withdrawFrequency[$userKey]['sum'] - $this->privateClientFreeAmount;
 
-            if ($notFreeAmount >= $amountEuro) {
+            if ($notFreeAmount >= $amountInDefaultCurrency) {
                 return $this->calcPrivateClientFee($amount);
-            }
-            else {
+            } else {
                 return $this->calcPrivateClientFee(
                     $this->convertToCurrency($notFreeAmount, $currency)
                 );
             }
         }
 
-        // There is clarification required. They say: any 4th withdraw must be charged, but then say up to 1000 fee is not applied
         if ($this->withdrawFrequency[$userKey]['frequency'] <= $this->privateClientFreeWithdraws) {
-            return 0.0;
+            return '0.00';
         }
 
         return $this->calcPrivateClientFee($amount);
@@ -61,26 +64,26 @@ class WithdrawCalculator implements FeeCalculatorInterface
 
     private function calcBusinessClientFee(float $amount): string
     {
-        return number_format(((double)$this->businessClientFee * $amount) / 100, 2, '.', '');
+        return bcmul((string)round((($this->businessClientFee * $amount) / 100), $this->feePrecision), '1');
     }
 
     private function calcPrivateClientFee(float $amount): string
     {
-        return number_format(((double)$this->privateClientFee * $amount) / 100, 2, '.', '');
+        return bcmul((string)round((($this->privateClientFee * $amount) / 100), $this->feePrecision), '1');
     }
 
-    private function convertToEuro($amount, $currency): float
+    private function convertToDefaultCurrency(float $amount, string $currency): float
     {
-        if (static::CURRENCY_EUR === $currency) {
+        if ($this->defaultCurrency === $currency) {
             return $amount;
         }
 
         return (float)$amount / $this->currencyExchanger->rate($currency);
     }
 
-    private function convertToCurrency($amount, $currency): float
+    private function convertToCurrency(float $amount, string $currency): float
     {
-        if (static::CURRENCY_EUR === $currency) {
+        if ($this->defaultCurrency === $currency) {
             return $amount;
         }
 

@@ -1,14 +1,16 @@
 # Test Task
 
 ##Requirements:
- - PHP 8.1.x
- - Symfony 6.2.x
+- [Docker](https://docs.docker.com/engine/install/ubuntu/)
+- [Docker-compose](https://docs.docker.com/compose/install/)
 
 ##Installation:
- - composer install
+ - Run `docker-compose exec php-fpm /bin/bash` to pass into container
+ - Inside container run `composer install` to install dependencies
+ - Copy config file `cp .env.example .env`
 
 ##Run command:
- - php bin/console app:calculate-fees test.csv
+ - Inside container run  `php bin/console app:calculate-fees test.csv`
 
 ##Run test:
- - php vendor/bin/phpunit
+ - Inside container run `php vendor/bin/phpunit`

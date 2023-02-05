@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Service;
 
 use App\Contract\FileParserInterface;
@@ -12,25 +14,22 @@ class FileParserManager
     {
         /** @var FileParserInterface $parser */
         foreach ($parsers as $parser) {
-            $this->parsersMap[$parser->format()] = $parser;
+            $this->parsersMap[$parser->mimeType()] = $parser;
         }
     }
 
-    public function parse(string $filename): array
+    public function parse(string $filename): \Generator
     {
         return $this->getParser($filename)->parse($filename);
     }
 
-    private function getFileExtension(string $filename): string
+    private function getFileMimeType(string $filename): string
     {
-        // In general better to use some lib to identify file type properly
-        $fileNameParts = explode('.', $filename);
-
-        return end($fileNameParts);
+        return finfo_file(finfo_open(FILEINFO_MIME_TYPE), $filename);
     }
 
     private function getParser(string $filename): FileParserInterface
     {
-        return $this->parsersMap[$this->getFileExtension($filename)];
+        return $this->parsersMap[$this->getFileMimeType($filename)];
     }
 }

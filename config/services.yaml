@@ -38,6 +38,7 @@ services:
     App\Service\Calculators\DepositCalculator:
         arguments:
             $depositPercentFee: '%env(DEPOSIT_PERCENT_FEE)%'
+            $feePrecision: '%env(FEE_PRECISION)%'
 
     App\Service\Calculators\WithdrawCalculator:
         arguments:
@@ -45,3 +46,5 @@ services:
             $businessClientFee: '%env(WITHDRAW_FEE_FOR_BUSINESS_CLIENT)%'
             $privateClientFreeAmount: '%env(PRIVATE_CLIENT_FREE_AMOUNT)%'
             $privateClientFreeWithdraws: '%env(PRIVATE_CLIENT_FREE_WITHDRAWS)%'
+            $feePrecision: '%env(FEE_PRECISION)%'
+            $defaultCurrency: '%env(DEFAULT_CURRENCY)%'

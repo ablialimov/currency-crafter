@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Service;
 
 use App\Contract\FeeCalculatorInterface;
@@ -16,17 +18,17 @@ class CommissionFeeManager
     }
 
     /**
-     * @param array $data
+     * @param \Generator $data
      * @return array []float
      */
-    public function calculate(array $data): array
+    public function calculate(\Generator $data): array
     {
         $result = [];
 
         foreach ($data as $row) {
             list($date, $userId, $userType, $operationType, $amount, $currency) = $row;
 
-            $result[] = $this->getCalculator($operationType)->calculate($date, $userId, $userType, $amount, $currency);
+            $result[] = $this->getCalculator($operationType)->calculate($date, $userId, $userType, (float)$amount, $currency);
         }
 
         return $result;
