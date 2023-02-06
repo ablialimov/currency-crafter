@@ -21,7 +21,6 @@ class WithdrawCalculator implements FeeCalculatorInterface
         private readonly int $feePrecision,
         private readonly string $defaultCurrency
     ) {
-        bcscale($feePrecision);
     }
 
     public function getType(): string
@@ -29,65 +28,82 @@ class WithdrawCalculator implements FeeCalculatorInterface
         return 'withdraw';
     }
 
-    public function calculate(string $date, string $userId, string $userType, float $amount, string $currency): string
+    public function calculate(string $date, string $userId, string $userType, string $amount, string $currency, bool $hasCents): string
     {
+        $scale = 0;
+        if ($hasCents) {
+            $scale = $this->feePrecision;
+        }
+
+        bcscale($scale);
+
         if (static::USER_TYPE_BUSINESS === $userType) {
-            return $this->calcBusinessClientFee($amount);
+            return $this->calcBusinessClientFee($amount, $scale);
         }
 
         $amountInDefaultCurrency = $this->convertToDefaultCurrency($amount, $currency);
         $weekId = $this->getWeekId($date);
         $userKey = $userId . '.' . $weekId;
 
-        $this->withdrawFrequency[$userKey] ??= ['sum' => 0.0, 'frequency' => 0];
-        $this->withdrawFrequency[$userKey]['sum'] += $amountInDefaultCurrency;
-        $this->withdrawFrequency[$userKey]['frequency']++;
+        $this->withdrawFrequency[$userKey] ??= ['sum' => '0', 'frequency' => '0'];
+        $this->withdrawFrequency[$userKey]['sum'] = bcadd($this->withdrawFrequency[$userKey]['sum'], $amountInDefaultCurrency);
+        $this->withdrawFrequency[$userKey]['frequency'] = bcadd($this->withdrawFrequency[$userKey]['frequency'], '1');
 
         if ($this->withdrawFrequency[$userKey]['sum'] > $this->privateClientFreeAmount) {
-            $notFreeAmount = $this->withdrawFrequency[$userKey]['sum'] - $this->privateClientFreeAmount;
+            $notFreeAmount = bcsub($this->withdrawFrequency[$userKey]['sum'], $this->privateClientFreeAmount);
 
             if ($notFreeAmount >= $amountInDefaultCurrency) {
-                return $this->calcPrivateClientFee($amount);
+                return $this->calcPrivateClientFee($amount, $scale);
             } else {
-                return $this->calcPrivateClientFee(
-                    $this->convertToCurrency($notFreeAmount, $currency)
-                );
+                return $this->calcPrivateClientFee($this->convertToCurrency($notFreeAmount, $currency), $scale);
             }
         }
 
         if ($this->withdrawFrequency[$userKey]['frequency'] <= $this->privateClientFreeWithdraws) {
-            return '0.00';
+            return $hasCents ? '0.00' : '0';
         }
 
-        return $this->calcPrivateClientFee($amount);
+        return $this->calcPrivateClientFee($amount, $scale);
     }
 
-    private function calcBusinessClientFee(float $amount): string
+    private function roundFeeCommission(string $value, int $places = 0): string
     {
-        return bcmul((string)round((($this->businessClientFee * $amount) / 100), $this->feePrecision), '1');
+        if ($places < 0) {
+            $places = 0;
+        }
+
+        $x = pow(10, $places);
+        $result = (string)(($value >= 0 ? ceil($value * $x) : floor($value * $x)) / $x);
+
+        return sprintf("%0.{$places}f", $result);
     }
 
-    private function calcPrivateClientFee(float $amount): string
+    private function calcBusinessClientFee(string $amount, int $scale = 0): string
     {
-        return bcmul((string)round((($this->privateClientFee * $amount) / 100), $this->feePrecision), '1');
+        return $this->roundFeeCommission((string)(bcmul($this->businessClientFee, $amount) / 100), $scale);
     }
 
-    private function convertToDefaultCurrency(float $amount, string $currency): float
+    private function calcPrivateClientFee(string $amount, int $scale = 0): string
+    {
+        return $this->roundFeeCommission((string)(bcmul($this->privateClientFee, $amount) / 100), $scale);
+    }
+
+    private function convertToDefaultCurrency(string $amount, string $currency): string
     {
         if ($this->defaultCurrency === $currency) {
             return $amount;
         }
 
-        return (float)$amount / $this->currencyExchanger->rate($currency);
+        return bcdiv($amount, $this->currencyExchanger->rate($currency));
     }
 
-    private function convertToCurrency(float $amount, string $currency): float
+    private function convertToCurrency(string $amount, string $currency): string
     {
         if ($this->defaultCurrency === $currency) {
             return $amount;
         }
 
-        return (float)$amount * $this->currencyExchanger->rate($currency);
+        return bcmul($amount, $this->currencyExchanger->rate($currency));
     }
 
     private function getWeekId(string $date): string
@@ -98,4 +114,11 @@ class WithdrawCalculator implements FeeCalculatorInterface
             '.'.
             date("Y-m-d", strtotime('sunday this week', $convertedDate));
     }
+
+    private function isNumeric(string $amount): bool
+    {
+        return !strpos($amount, '.') !== false;
+    }
+
+
 }

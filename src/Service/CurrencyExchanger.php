@@ -18,13 +18,13 @@ class CurrencyExchanger
     ) {
     }
 
-    public function rate(string $currency): float
+    public function rate(string $currency): string
     {
         if (!$this->rates) {
             $this->rates = $this->loadRates();
         }
 
-        return $this->rates[$currency];
+        return (string)$this->rates[$currency];
     }
 
     private function loadRates()

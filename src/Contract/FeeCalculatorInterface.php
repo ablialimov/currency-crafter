@@ -11,5 +11,5 @@ interface FeeCalculatorInterface
 
     public function getType(): string;
 
-    public function calculate(string $date, string $userId, string $userType, float $amount, string $currency): string;
+    public function calculate(string $date, string $userId, string $userType, string $amount, string $currency, bool $hasCents): string;
 }

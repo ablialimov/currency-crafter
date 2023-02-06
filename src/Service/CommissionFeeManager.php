@@ -27,8 +27,9 @@ class CommissionFeeManager
 
         foreach ($data as $row) {
             list($date, $userId, $userType, $operationType, $amount, $currency) = $row;
+            $hasCents = $this->hasCents($amount);
 
-            $result[] = $this->getCalculator($operationType)->calculate($date, $userId, $userType, (float)$amount, $currency);
+            $result[] = $this->getCalculator($operationType)->calculate($date, $userId, $userType, $amount, $currency, $hasCents);
         }
 
         return $result;
@@ -37,5 +38,10 @@ class CommissionFeeManager
     private function getCalculator($operationType): FeeCalculatorInterface
     {
         return $this->calculatorMap[$operationType];
+    }
+
+    private function hasCents(string $amount): bool
+    {
+        return str_contains($amount, '.');
     }
 }
