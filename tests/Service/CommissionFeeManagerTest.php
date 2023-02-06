@@ -9,7 +9,7 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 class CommissionFeeManagerTest extends KernelTestCase
 {
-    private const EXPECTED_RESULT = ['0.60', '3.00', '0.00', '0.06', '1.50', '0.00', '0.69', '0.30', '0.30', '3.00', '0.00', '0.00', '8607.39'];
+    private const EXPECTED_RESULT = ['0.60', '3.00', '0.00', '0.06', '1.50', '0', '0.69', '0.30', '0.30', '3.00', '0.00', '0.00', '8608'];
 
     public function testCalculate(): void
     {

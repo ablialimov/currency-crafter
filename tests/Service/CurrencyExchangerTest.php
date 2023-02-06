@@ -4,6 +4,7 @@ namespace App\Tests\Service;
 
 use App\Service\CurrencyExchanger;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
+use Symfony\Component\DependencyInjection\ParameterBag\ContainerBagInterface;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -22,7 +23,9 @@ class CurrencyExchangerTest extends KernelTestCase
         $client = $this->createMock(HttpClientInterface::class);
         $client->method('request')->willReturn($response);
 
-        $currencyExchanger = new CurrencyExchanger('http://exchanger-api-url', $client);
+        $containerBag = $this->createMock(ContainerBagInterface::class);
+
+        $currencyExchanger = new CurrencyExchanger('http://exchanger-api-url', $client, $containerBag);
 
         $this->assertEquals(static::EXPECTED_RESULT, $currencyExchanger->rate('USD'));
     }

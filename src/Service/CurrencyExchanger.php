@@ -6,6 +6,7 @@ namespace App\Service;
 
 use Exception;
 use RuntimeException;
+use Symfony\Component\DependencyInjection\ParameterBag\ContainerBagInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class CurrencyExchanger
@@ -14,7 +15,8 @@ class CurrencyExchanger
 
     public function __construct(
         private readonly string $apiUrl,
-        private readonly HttpClientInterface $client
+        private readonly HttpClientInterface $client,
+        private readonly ContainerBagInterface $params
     ) {
     }
 
@@ -29,6 +31,12 @@ class CurrencyExchanger
 
     private function loadRates()
     {
+        if ($this->params->get('defaultRatesMode')) {
+            $json =json_decode(file_get_contents($this->params->get('defaultRatesFilePath')), true);
+
+            return $json['rates'];
+        }
+
         try {
             $response = $this->client->request('GET', $this->apiUrl);
 

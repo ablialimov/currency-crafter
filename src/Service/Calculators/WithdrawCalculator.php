@@ -30,11 +30,7 @@ class WithdrawCalculator implements FeeCalculatorInterface
 
     public function calculate(string $date, string $userId, string $userType, string $amount, string $currency, bool $hasCents): string
     {
-        $scale = 0;
-        if ($hasCents) {
-            $scale = $this->feePrecision;
-        }
-
+        $scale = $hasCents ? $this->feePrecision : 0;
         bcscale($scale);
 
         if (static::USER_TYPE_BUSINESS === $userType) {
