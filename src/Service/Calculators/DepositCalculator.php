@@ -8,6 +8,8 @@ use App\Contract\FeeCalculatorInterface;
 
 class DepositCalculator implements FeeCalculatorInterface
 {
+    use FeeCalculatorTrait;
+
     public function __construct(private readonly string $depositPercentFee, private readonly int $feePrecision)
     {
     }
@@ -19,8 +21,8 @@ class DepositCalculator implements FeeCalculatorInterface
 
     public function calculate(string $date, string $userId, string $userType, string $amount, string $currency, bool $hasCents): string
     {
-        bcscale($hasCents ? $this->feePrecision : 0);
+        $scale = $hasCents ? $this->feePrecision : 0;
 
-        return bcdiv(bcmul($this->depositPercentFee, $amount), '100');
+        return $this->roundFeeCommission(bcdiv(bcmul($this->depositPercentFee, $amount, static::CALC_PRECISION), '100', static::CALC_PRECISION), $scale, $hasCents);
     }
 }

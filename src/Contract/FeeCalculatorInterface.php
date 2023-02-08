@@ -6,6 +6,8 @@ namespace App\Contract;
 
 interface FeeCalculatorInterface
 {
+    const CALC_PRECISION = 4;
+
     const USER_TYPE_PRIVATE = 'private';
     const USER_TYPE_BUSINESS = 'business';
 

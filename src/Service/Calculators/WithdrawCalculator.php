@@ -10,13 +10,15 @@ use DateTime;
 
 class WithdrawCalculator implements FeeCalculatorInterface
 {
+    use FeeCalculatorTrait;
+
     private array $withdrawFrequency = [];
 
     public function __construct(
-        private string $privateClientFee,
-        private string $businessClientFee,
-        private string $privateClientFreeAmount,
-        private string $privateClientFreeWithdraws,
+        private readonly string $privateClientFee,
+        private readonly string $businessClientFee,
+        private readonly string $privateClientFreeAmount,
+        private readonly string $privateClientFreeWithdraws,
         private readonly CurrencyExchanger $currencyExchanger,
         private readonly int $feePrecision,
         private readonly string $defaultCurrency
@@ -31,10 +33,9 @@ class WithdrawCalculator implements FeeCalculatorInterface
     public function calculate(string $date, string $userId, string $userType, string $amount, string $currency, bool $hasCents): string
     {
         $scale = $hasCents ? $this->feePrecision : 0;
-        bcscale($scale);
 
         if (static::USER_TYPE_BUSINESS === $userType) {
-            return $this->calcBusinessClientFee($amount, $scale);
+            return $this->calcBusinessClientFee($amount, $scale, $hasCents);
         }
 
         $amountInDefaultCurrency = $this->convertToDefaultCurrency($amount, $currency);
@@ -42,46 +43,34 @@ class WithdrawCalculator implements FeeCalculatorInterface
         $userKey = $userId . '.' . $weekId;
 
         $this->withdrawFrequency[$userKey] ??= ['sum' => '0', 'frequency' => '0'];
-        $this->withdrawFrequency[$userKey]['sum'] = bcadd($this->withdrawFrequency[$userKey]['sum'], $amountInDefaultCurrency);
-        $this->withdrawFrequency[$userKey]['frequency'] = bcadd($this->withdrawFrequency[$userKey]['frequency'], '1');
+        $this->withdrawFrequency[$userKey]['sum'] = bcadd($this->withdrawFrequency[$userKey]['sum'], $amountInDefaultCurrency, $scale);
+        $this->withdrawFrequency[$userKey]['frequency'] = bcadd($this->withdrawFrequency[$userKey]['frequency'], '1', $scale);
 
-        if ($this->withdrawFrequency[$userKey]['sum'] > $this->privateClientFreeAmount) {
-            $notFreeAmount = bcsub($this->withdrawFrequency[$userKey]['sum'], $this->privateClientFreeAmount);
+        if ($this->withdrawFrequency[$userKey]['sum'] <= $this->privateClientFreeAmount && $this->withdrawFrequency[$userKey]['frequency'] <= $this->privateClientFreeWithdraws) {
+            $result = $hasCents ? sprintf("%0.{$this->feePrecision}f", 0) : '0';
+        } elseif ($this->withdrawFrequency[$userKey]['sum'] > $this->privateClientFreeAmount && $this->withdrawFrequency[$userKey]['frequency'] <= $this->privateClientFreeWithdraws) {
+            $notFreeAmount = bcsub($this->withdrawFrequency[$userKey]['sum'], $this->privateClientFreeAmount, $scale);
 
             if ($notFreeAmount >= $amountInDefaultCurrency) {
-                return $this->calcPrivateClientFee($amount, $scale);
+                $result = $this->calcPrivateClientFee($amount, $scale, $hasCents);
             } else {
-                return $this->calcPrivateClientFee($this->convertToCurrency($notFreeAmount, $currency), $scale);
+                $result = $this->calcPrivateClientFee($this->convertToCurrency($notFreeAmount, $currency), $scale, $hasCents);
             }
+        } else {
+            $result = $this->calcPrivateClientFee($amount, $scale, $hasCents);
         }
 
-        if ($this->withdrawFrequency[$userKey]['frequency'] <= $this->privateClientFreeWithdraws) {
-            return $hasCents ? '0.00' : '0';
-        }
-
-        return $this->calcPrivateClientFee($amount, $scale);
+        return $result;
     }
 
-    private function roundFeeCommission(string $value, int $places = 0): string
+    private function calcBusinessClientFee(string $amount, int $scale, bool $hasCents): string
     {
-        if ($places < 0) {
-            $places = 0;
-        }
-
-        $x = pow(10, $places);
-        $result = (string)(($value >= 0 ? ceil($value * $x) : floor($value * $x)) / $x);
-
-        return sprintf("%0.{$places}f", $result);
+        return $this->roundFeeCommission(bcdiv(bcmul($this->businessClientFee, $amount, static::CALC_PRECISION), '100', static::CALC_PRECISION), $scale, $hasCents);
     }
 
-    private function calcBusinessClientFee(string $amount, int $scale = 0): string
+    private function calcPrivateClientFee(string $amount, int $scale, bool $hasCents): string
     {
-        return $this->roundFeeCommission((string)(bcmul($this->businessClientFee, $amount) / 100), $scale);
-    }
-
-    private function calcPrivateClientFee(string $amount, int $scale = 0): string
-    {
-        return $this->roundFeeCommission((string)(bcmul($this->privateClientFee, $amount) / 100), $scale);
+        return $this->roundFeeCommission(bcdiv(bcmul($this->privateClientFee, $amount, static::CALC_PRECISION), '100', static::CALC_PRECISION), $scale, $hasCents);
     }
 
     private function convertToDefaultCurrency(string $amount, string $currency): string
@@ -90,7 +79,7 @@ class WithdrawCalculator implements FeeCalculatorInterface
             return $amount;
         }
 
-        return bcdiv($amount, $this->currencyExchanger->rate($currency));
+        return bcdiv($amount, $this->currencyExchanger->rate($currency), static::CALC_PRECISION);
     }
 
     private function convertToCurrency(string $amount, string $currency): string
@@ -99,7 +88,7 @@ class WithdrawCalculator implements FeeCalculatorInterface
             return $amount;
         }
 
-        return bcmul($amount, $this->currencyExchanger->rate($currency));
+        return bcmul($amount, $this->currencyExchanger->rate($currency), static::CALC_PRECISION);
     }
 
     private function getWeekId(string $date): string
@@ -110,11 +99,4 @@ class WithdrawCalculator implements FeeCalculatorInterface
             '.'.
             date("Y-m-d", strtotime('sunday this week', $convertedDate));
     }
-
-    private function isNumeric(string $amount): bool
-    {
-        return !strpos($amount, '.') !== false;
-    }
-
-
 }
