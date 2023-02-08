@@ -13,8 +13,6 @@ class CsvParserTest extends KernelTestCase
     {
         self::bootKernel();
 
-        self::bootKernel();
-
         $fsMock = vfsStream::setup();
         $fileMock = new vfsStreamFile('test.csv');
         $fsMock->addChild($fileMock);

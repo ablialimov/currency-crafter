@@ -95,8 +95,10 @@ class WithdrawCalculator implements FeeCalculatorInterface
     {
         $convertedDate = strtotime($date);
 
-        return date("Y-m-d", strtotime('monday this week', $convertedDate)).
-            '.'.
-            date("Y-m-d", strtotime('sunday this week', $convertedDate));
+        return sprintf(
+            '%s.%s',
+            date("Y-m-d", strtotime('monday this week', $convertedDate)),
+            date("Y-m-d", strtotime('sunday this week', $convertedDate))
+        );
     }
 }

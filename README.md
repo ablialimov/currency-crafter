@@ -5,12 +5,13 @@
 - [Docker-compose](https://docs.docker.com/compose/install/)
 
 ##Installation:
+ - Open your console and run `cp -u .env.example .env` 
  - Run `docker-compose up` to build a container
  - Run `docker-compose exec php-fpm /bin/bash` to pass into container
  - Inside container run `composer install` to install dependencies
 
 ##Run command:
- - Inside container run  `php bin/console app:calculate-fees test.csv`
+ - Inside container run `php bin/console app:calculate-fees test.csv`
 
 ##Run test:
  - Inside container run `php vendor/bin/phpunit`

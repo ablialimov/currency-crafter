@@ -20,7 +20,13 @@ class CommissionFeeManagerTest extends KernelTestCase
         // To avoid FLAKY test
         $this->mockCurrencyExchanger();
 
-        $this->assertEquals(self::EXPECTED_RESULT, $feeManager->calculate($this->getTestData()));
+        $result = $feeManager->calculate($this->getTestData());
+        $this->assertInstanceof(\Generator::class, $result);
+
+        foreach (static::EXPECTED_RESULT as $fee) {
+            $this->assertEquals($fee, $result->current());
+            $result->next();
+        }
     }
 
     private function mockCurrencyExchanger(): void

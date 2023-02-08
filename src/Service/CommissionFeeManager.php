@@ -17,22 +17,14 @@ class CommissionFeeManager
         }
     }
 
-    /**
-     * @param \Generator $data
-     * @return array []float
-     */
-    public function calculate(\Generator $data): array
+    public function calculate(\Generator $data): \Generator
     {
-        $result = [];
-
         foreach ($data as $row) {
             list($date, $userId, $userType, $operationType, $amount, $currency) = $row;
             $hasCents = $this->hasCents($amount);
 
-            $result[] = $this->getCalculator($operationType)->calculate($date, $userId, $userType, $amount, $currency, $hasCents);
+            yield $this->getCalculator($operationType)->calculate($date, $userId, $userType, $amount, $currency, $hasCents);
         }
-
-        return $result;
     }
 
     private function getCalculator($operationType): FeeCalculatorInterface
