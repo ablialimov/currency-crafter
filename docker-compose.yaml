@@ -2,5 +2,9 @@ version: "3.3"
 services:
   php-fpm:
     build: phpdocker
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      PHP_IDE_CONFIG: "serverName=php-fpm"
     volumes:
       - '.:/application'

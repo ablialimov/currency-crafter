@@ -13,6 +13,12 @@ such as customer type, transaction currency, and so on.
  - Run `docker-compose exec php-fpm /bin/bash` to pass into container
  - Inside container run `composer install` to install dependencies
 
+## Xdebug
+
+To enable xdebug on local machine (PHPStorm):
+* Go to Settings -> PHP -> Servers and set up new server with name "php-fpm" and host "172.22.0.1".<br>
+Also set up path mappings: /application to main folder
+
 ## Run command:
  - Inside container run `php bin/console app:calculate-fees test.csv`
 
