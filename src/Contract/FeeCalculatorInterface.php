@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Contract;
 
+use App\Dto\AccountOperation;
+
 interface FeeCalculatorInterface
 {
     const CALC_PRECISION = 4;
@@ -13,5 +15,5 @@ interface FeeCalculatorInterface
 
     public function getType(): string;
 
-    public function calculate(string $date, string $userId, string $userType, string $amount, string $currency, bool $hasCents): string;
+    public function calculate(AccountOperation $accountOperation): string;
 }

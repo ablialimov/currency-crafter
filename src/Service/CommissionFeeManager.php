@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Contract\FeeCalculatorInterface;
+use App\Dto\AccountOperation;
 
 class CommissionFeeManager
 {
@@ -23,7 +24,16 @@ class CommissionFeeManager
             list($date, $userId, $userType, $operationType, $amount, $currency) = $row;
             $hasCents = $this->hasCents($amount);
 
-            yield $this->getCalculator($operationType)->calculate($date, $userId, $userType, $amount, $currency, $hasCents);
+            yield $this->getCalculator($operationType)->calculate(
+                new AccountOperation(
+                    $date,
+                    $userId,
+                    $userType,
+                    $amount,
+                    $currency,
+                    $hasCents
+                )
+            );
         }
     }
 

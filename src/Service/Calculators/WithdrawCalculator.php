@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Calculators;
 
 use App\Contract\FeeCalculatorInterface;
+use App\Dto\AccountOperation;
 use App\Service\CurrencyExchanger;
-use DateTime;
 
 class WithdrawCalculator implements FeeCalculatorInterface
 {
@@ -30,34 +30,38 @@ class WithdrawCalculator implements FeeCalculatorInterface
         return 'withdraw';
     }
 
-    public function calculate(string $date, string $userId, string $userType, string $amount, string $currency, bool $hasCents): string
+    public function calculate(AccountOperation $accountOperation): string
     {
-        $scale = $hasCents ? $this->feePrecision : 0;
+        $scale = $accountOperation->hasCents ? $this->feePrecision : 0;
 
-        if (static::USER_TYPE_BUSINESS === $userType) {
-            return $this->calcBusinessClientFee($amount, $scale, $hasCents);
+        if (static::USER_TYPE_BUSINESS === $accountOperation->userType) {
+            return $this->calcBusinessClientFee($accountOperation->amount, $scale, $accountOperation->hasCents);
         }
 
-        $amountInDefaultCurrency = $this->convertToDefaultCurrency($amount, $currency);
-        $weekId = $this->getWeekId($date);
-        $userKey = $userId . '.' . $weekId;
+        $amountInDefaultCurrency = $this->convertToDefaultCurrency($accountOperation->amount, $accountOperation->currency);
+        $weekId = $this->getWeekId($accountOperation->date);
+        $userKey = sprintf('%s.%s', $accountOperation->userId, $weekId);
 
         $this->withdrawFrequency[$userKey] ??= ['sum' => '0', 'frequency' => '0'];
         $this->withdrawFrequency[$userKey]['sum'] = bcadd($this->withdrawFrequency[$userKey]['sum'], $amountInDefaultCurrency, $scale);
         $this->withdrawFrequency[$userKey]['frequency'] = bcadd($this->withdrawFrequency[$userKey]['frequency'], '1', $scale);
 
         if ($this->withdrawFrequency[$userKey]['sum'] <= $this->privateClientFreeAmount && $this->withdrawFrequency[$userKey]['frequency'] <= $this->privateClientFreeWithdraws) {
-            $result = $hasCents ? sprintf("%0.{$this->feePrecision}f", 0) : '0';
+            $result = $accountOperation->hasCents ? sprintf("%0.{$this->feePrecision}f", 0) : '0';
         } elseif ($this->withdrawFrequency[$userKey]['sum'] > $this->privateClientFreeAmount && $this->withdrawFrequency[$userKey]['frequency'] <= $this->privateClientFreeWithdraws) {
             $notFreeAmount = bcsub($this->withdrawFrequency[$userKey]['sum'], $this->privateClientFreeAmount, $scale);
 
             if ($notFreeAmount >= $amountInDefaultCurrency) {
-                $result = $this->calcPrivateClientFee($amount, $scale, $hasCents);
+                $result = $this->calcPrivateClientFee($accountOperation->amount, $scale, $accountOperation->hasCents);
             } else {
-                $result = $this->calcPrivateClientFee($this->convertToCurrency($notFreeAmount, $currency), $scale, $hasCents);
+                $result = $this->calcPrivateClientFee(
+                    $this->convertToCurrency($notFreeAmount, $accountOperation->currency),
+                    $scale,
+                    $accountOperation->hasCents
+                );
             }
         } else {
-            $result = $this->calcPrivateClientFee($amount, $scale, $hasCents);
+            $result = $this->calcPrivateClientFee($accountOperation->amount, $scale, $accountOperation->hasCents);
         }
 
         return $result;

@@ -2,6 +2,7 @@
 
 namespace App\Tests\Service\Calculators;
 
+use App\Dto\AccountOperation;
 use App\Service\Calculators\DepositCalculator;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
@@ -13,10 +14,18 @@ class DepositCalculatorTest extends KernelTestCase
     public function testCalculate(array $data): void
     {
         list($date, $userId, $userType, $amount, $currency, $hasCents, $expectedResult) = $data;
+        $accountOperation = new AccountOperation(
+            $date,
+            $userId,
+            $userType,
+            $amount,
+            $currency,
+            $hasCents,
+        );
 
         $calculator = new DepositCalculator('0.03', 2);
 
-        $actual = $calculator->calculate($date, $userId, $userType, $amount, $currency, $hasCents);
+        $actual = $calculator->calculate($accountOperation);
 
         $this->assertEquals($expectedResult, $actual);
         $this->assertEquals($expectedResult, $actual);

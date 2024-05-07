@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Calculators;
 
 use App\Contract\FeeCalculatorInterface;
+use App\Dto\AccountOperation;
 
 class DepositCalculator implements FeeCalculatorInterface
 {
@@ -19,10 +20,18 @@ class DepositCalculator implements FeeCalculatorInterface
         return 'deposit';
     }
 
-    public function calculate(string $date, string $userId, string $userType, string $amount, string $currency, bool $hasCents): string
+    public function calculate(AccountOperation $accountOperation): string
     {
-        $scale = $hasCents ? $this->feePrecision : 0;
+        $scale = $accountOperation->hasCents ? $this->feePrecision : 0;
 
-        return $this->roundFeeCommission(bcdiv(bcmul($this->depositPercentFee, $amount, static::CALC_PRECISION), '100', static::CALC_PRECISION), $scale, $hasCents);
+        return $this->roundFeeCommission(
+            bcdiv(
+                bcmul($this->depositPercentFee, $accountOperation->amount, static::CALC_PRECISION),
+                '100',
+                static::CALC_PRECISION
+            ),
+            $scale,
+            $accountOperation->hasCents,
+        );
     }
 }
