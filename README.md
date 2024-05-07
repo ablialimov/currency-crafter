@@ -1,22 +1,25 @@
-# Test Task
+# Currency Crafter
 
-##Requirements:
+Console application that parses a file containing transaction data and calculates commissions applying various rules,
+such as customer type, transaction currency, and so on.
+
+## Requirements:
 - [Docker](https://docs.docker.com/engine/install/ubuntu/)
 - [Docker-compose](https://docs.docker.com/compose/install/)
 
-##Installation:
+## Installation:
  - Open your console and run `cp -u .env.example .env` 
  - Run `docker-compose up` to build a container
  - Run `docker-compose exec php-fpm /bin/bash` to pass into container
  - Inside container run `composer install` to install dependencies
 
-##Run command:
+## Run command:
  - Inside container run `php bin/console app:calculate-fees test.csv`
 
-##Run test:
+## Run test:
  - Inside container run `php vendor/bin/phpunit`
  
- ##Env variables:
+## Env variables:
  - `CURRENCY_EXCHANGE_API_URL` - Api url of currency rates
  - `DEFAULT_CURRENCY` - Default currency
  - `DEFAULT_RATES_MODE` - Determines whether it is necessary to make requests to the currency rate server. Enum (`1`, `0`). Default `1`
